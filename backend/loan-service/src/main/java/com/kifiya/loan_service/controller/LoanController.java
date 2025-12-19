@@ -23,8 +23,8 @@ public class LoanController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Loan>> get(@PathVariable UUID loanId) {
-        return ResponseEntity.ok(loanService.getLoans(loanId));
+    public ResponseEntity<List<Loan>> get(@RequestParam(value = "customerId") UUID customerId) {
+        return ResponseEntity.ok(loanService.getLoans(customerId));
     }
 
     @PostMapping
