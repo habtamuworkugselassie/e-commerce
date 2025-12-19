@@ -1,11 +1,12 @@
 # Build stage
-FROM gradle:8.10-jdk21 AS build
+FROM gradle:8.14.3-jdk21 AS build
 
 WORKDIR /app
 
 # Copy Gradle wrapper and build files
 COPY gradle/ gradle/
 COPY gradlew build.gradle settings.gradle ./
+COPY gradlew.bat ./
 
 # Copy source code
 COPY src/ src/
