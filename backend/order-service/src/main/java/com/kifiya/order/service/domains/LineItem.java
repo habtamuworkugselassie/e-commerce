@@ -1,0 +1,50 @@
+package com.kifiya.order.service.domains;
+
+import com.kifiya.order.config.PromotionAppConfig;
+import com.kifiya.order.controller.domains.CartItemDto;
+import com.kifiya.order.models.Product;
+import com.kifiya.order.models.PromotionType;
+import lombok.Getter;
+
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+@Getter
+public class LineItem {
+    private final UUID productId;
+    private final int requestedQty;
+    private final Product product;
+    private BigDecimal currentPrice;
+    private final List<AppliedPromotion> appliedPromotions;
+
+    public LineItem(CartItemDto item, Product product) {
+        this.productId = item.productId();
+        this.requestedQty = item.qty();
+        this.product = product;
+        this.currentPrice = product.getPrice().multiply(BigDecimal.valueOf(requestedQty));
+        this.appliedPromotions = new java.util.ArrayList<>();
+    }
+
+    public void applyDiscount(PromotionType promotionType, BigDecimal discountAmount, String promotionName, String description) {
+        if (discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal newPrice = currentPrice.subtract(discountAmount);
+
+            // Constraint: Price must not go negative
+            if (newPrice.compareTo(BigDecimal.ZERO) < 0) {
+                discountAmount = currentPrice;
+                newPrice = BigDecimal.ZERO;
+            }
+
+            this.currentPrice = newPrice.setScale(2, PromotionAppConfig.MONEY_ROUNDING_MODE);
+
+            appliedPromotions.add(new AppliedPromotion(promotionType, promotionName, description));
+        }
+    }
+
+    public List<AppliedPromotion> getAppliedPromotions() {
+        return Collections.unmodifiableList(appliedPromotions);
+    }
+
+}
