@@ -123,9 +123,133 @@ services:
       - ecommerce-network
     restart: unless-stopped
 
+  # PostgreSQL database for identity-service
+  identity-db:
+    image: postgres:16-alpine
+    container_name: identity-db
+    environment:
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: identity_user
+      POSTGRES_PASSWORD: identity_password
+    ports:
+      - "5435:5432"
+    volumes:
+      - identity_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U identity_user -d identity_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+
+  # Identity Service
+  identity-service:
+    build:
+      context: ./backend/identity-service
+      dockerfile: Dockerfile
+      args:
+        DB_HOST: identity-db
+        DB_PORT: 5432
+        DB_NAME: identity_db
+        DB_USERNAME: identity_user
+        DB_PASSWORD: identity_password
+        DB_DRIVER: org.postgresql.Driver
+    container_name: identity-service
+    environment:
+      DB_HOST: identity-db
+      DB_PORT: 5432
+      DB_NAME: identity_db
+      DB_USERNAME: identity_user
+      DB_PASSWORD: identity_password
+      DB_DRIVER: org.postgresql.Driver
+      SPRING_DATASOURCE_URL: jdbc:postgresql://identity-db:5432/identity_db
+      SPRING_DATASOURCE_USERNAME: identity_user
+      SPRING_DATASOURCE_PASSWORD: identity_password
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+    ports:
+      - "8082:8082"
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+
+  # PostgreSQL database for credit-scoring-service
+  credit-scoring-db:
+    image: postgres:16-alpine
+    container_name: credit-scoring-db
+    environment:
+      POSTGRES_DB: credit_scoring_db
+      POSTGRES_USER: credit_scoring_user
+      POSTGRES_PASSWORD: credit_scoring_password
+    ports:
+      - "5436:5432"
+    volumes:
+      - credit_scoring_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U credit_scoring_user -d credit_scoring_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+
+  # Credit Scoring Service
+  credit-scoring-service:
+    build:
+      context: ./backend/credit-scoring-service
+      dockerfile: Dockerfile
+      args:
+        DB_HOST: credit-scoring-db
+        DB_PORT: 5432
+        DB_NAME: credit_scoring_db
+        DB_USERNAME: credit_scoring_user
+        DB_PASSWORD: credit_scoring_password
+        DB_DRIVER: org.postgresql.Driver
+    container_name: credit-scoring-service
+    environment:
+      DB_HOST: credit-scoring-db
+      DB_PORT: 5432
+      DB_NAME: credit_scoring_db
+      DB_USERNAME: credit_scoring_user
+      DB_PASSWORD: credit_scoring_password
+      DB_DRIVER: org.postgresql.Driver
+      SPRING_DATASOURCE_URL: jdbc:postgresql://credit-scoring-db:5432/credit_scoring_db
+      SPRING_DATASOURCE_USERNAME: credit_scoring_user
+      SPRING_DATASOURCE_PASSWORD: credit_scoring_password
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+    ports:
+      - "8083:8083"
+    depends_on:
+      credit-scoring-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8083/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+
 volumes:
   loan_db_data:
   order_db_data:
+  identity_db_data:
+  credit_scoring_db_data:
 
 networks:
   ecommerce-network:
